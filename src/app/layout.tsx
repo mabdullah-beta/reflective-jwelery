@@ -1,16 +1,30 @@
-import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
-import "styles/globals.css"
+import { getBaseURL } from "@lib/util/env"
+import Footer from "@modules/layout/templates/footer"
+import Nav from "@modules/layout/templates/nav"
+import { Inter } from "next/font/google"
+import "./globals.css"
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
 }
 
-export default function RootLayout(props: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en" data-mode="light">
+    <html lang="en" className={inter.variable}>
       <body>
-        <main className="relative">{props.children}</main>
+        <Nav />
+        <main className="relative">{children}</main>
+        <Footer />
       </body>
     </html>
   )

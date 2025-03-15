@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: "Inter", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-base leading-6;
+  }
+}
+
+@layer components {
+  .content-container {
+    @apply max-w-[1440px] w-full mx-auto px-4;
+  }
+
+  .txt-compact-xlarge-plus {
+    @apply text-2xl leading-8 font-semibold;
+  }
+
+  .txt-compact-small-plus {
+    @apply text-sm leading-5 font-semibold;
+  }
+
+  .txt-small-plus {
+    @apply text-sm leading-6 font-semibold;
+  }
+
+  .txt-small-regular {
+    @apply text-sm leading-6;
+  }
+
+  .txt-base-regular {
+    @apply text-base leading-6;
+  }
+
+  .txt-2xl-semi {
+    @apply text-2xl leading-8 font-semibold;
+  }
+
+  .text-ui-fg-base {
+    @apply text-gray-900;
+  }
+
+  .text-ui-fg-subtle {
+    @apply text-gray-600;
+  }
+
+  .text-ui-fg-muted {
+    @apply text-gray-500;
+  }
+
+  .bg-ui-bg-base {
+    @apply bg-white;
+  }
+
+  .border-ui-border-base {
+    @apply border-gray-200;
+  }
+} 

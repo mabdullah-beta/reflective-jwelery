@@ -10,6 +10,9 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const products = await listNeonProducts(6)
+  
+  // Log the products data
+  console.log('Homepage Products:', JSON.stringify(products, null, 2))
 
   return (
     <>
@@ -24,7 +27,7 @@ export default async function Home() {
           </div>
           <ul className="grid grid-cols-2 small:grid-cols-3 gap-x-4 gap-y-8">
             {products.map((product) => (
-              <li key={product.id}>
+              <li key={`product-${product.product_id}`}>
                 <NeonProductPreview {...product} />
               </li>
             ))}
@@ -33,4 +36,4 @@ export default async function Home() {
       </div>
     </>
   )
-}
+} 

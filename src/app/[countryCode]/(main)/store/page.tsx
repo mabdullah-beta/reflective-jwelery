@@ -1,33 +1,32 @@
 import { Metadata } from "next"
-
-import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-import StoreTemplate from "@modules/store/templates"
+import { listNeonProducts } from "@lib/data/neon-products"
+import NeonProductPreview from "@modules/products/components/neon-product-preview"
 
 export const metadata: Metadata = {
-  title: "Store",
-  description: "Explore all of our products.",
+  title: "Store | Reflective Jewelry",
+  description: "Browse all our jewelry pieces.",
 }
 
-type Params = {
-  searchParams: Promise<{
-    sortBy?: SortOptions
-    page?: string
-  }>
-  params: Promise<{
-    countryCode: string
-  }>
-}
-
-export default async function StorePage(props: Params) {
-  const params = await props.params;
-  const searchParams = await props.searchParams;
-  const { sortBy, page } = searchParams
+export default async function StorePage() {
+  const products = await listNeonProducts()
 
   return (
-    <StoreTemplate
-      sortBy={sortBy}
-      page={page}
-      countryCode={params.countryCode}
-    />
+    <div className="flex flex-col py-6">
+      <div className="content-container">
+        <div className="flex flex-col items-center text-center mb-16">
+          <h1 className="text-2xl-semi">All Products</h1>
+          <p className="text-base-regular text-gray-600 mt-2">
+            Browse through our entire collection
+          </p>
+        </div>
+        <ul className="grid grid-cols-2 small:grid-cols-3 gap-x-4 gap-y-8">
+          {products.map((product) => (
+            <li key={product.id}>
+              <NeonProductPreview {...product} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   )
 }
