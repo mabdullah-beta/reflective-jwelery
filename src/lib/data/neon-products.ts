@@ -136,31 +136,37 @@ export async function listNeonProducts({
       paramCounter++
     }
 
-    const query = `
+    // Build the main query
+    let mainQuery = `
       ${baseQuery}
       ${whereClause}
       GROUP BY p.product_id
       )
       SELECT * FROM product_categories
       ORDER BY ${sortBy} DESC
-      ${limit ? `LIMIT $${paramCounter}` : ""}
-      ${offset ? `OFFSET $${paramCounter + 1}` : ""}
     `
 
-    if (limit) {
-      queryParams.push(limit)
+    // Add pagination only if limit is provided
+    const paginationParams: any[] = []
+    if (typeof limit === "number") {
+      mainQuery += ` LIMIT $${paramCounter}`
+      paginationParams.push(limit)
       paramCounter++
-    }
-    if (offset) {
-      queryParams.push(offset)
-      paramCounter++
+
+      // Only add offset if limit is also provided
+      if (typeof offset === "number" && offset > 0) {
+        mainQuery += ` OFFSET $${paramCounter}`
+        paginationParams.push(offset)
+        paramCounter++
+      }
     }
 
-    const result = await client.query(query, queryParams)
+    // Combine all parameters
+    const mainQueryParams = [...queryParams, ...paginationParams]
+    const result = await client.query(mainQuery, mainQueryParams)
 
-    // Count query
-    let countQueryParams = queryParams.slice(0, paramCounter - (limit ? 2 : 0))
-    const baseCountQuery = `
+    // Count query (excluding pagination parameters)
+    const countQuery = `
       SELECT COUNT(DISTINCT p.product_id) as count
       FROM product p
       LEFT JOIN product_category_map pcm ON p.product_id = pcm.product_id
@@ -169,7 +175,7 @@ export async function listNeonProducts({
       ${whereClause}
     `
 
-    const countResult = await client.query(baseCountQuery, countQueryParams)
+    const countResult = await client.query(countQuery, queryParams)
     const count = parseInt(countResult.rows[0].count) || 0
 
     const products: NeonProduct[] = result.rows.map((row) => ({

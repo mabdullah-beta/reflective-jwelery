@@ -7,6 +7,8 @@ import CategoryBreadcrumb from "@modules/store/components/category-breadcrumb"
 import SearchBar from "@modules/store/components/search-bar"
 import { Metadata } from "next"
 import Pagination from "@modules/common/components/pagination"
+import { Suspense } from "react"
+import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 
 const PRODUCTS_PER_PAGE = 12
 
@@ -16,6 +18,67 @@ type Props = {
     page?: string
     search?: string
   }
+}
+
+// Separate component for the product grid to enable Suspense
+async function ProductGrid({
+  currentPage,
+  selectedCategoryId,
+  searchQuery,
+}: {
+  currentPage: number
+  selectedCategoryId?: number
+  searchQuery: string
+}) {
+  const { products, count } = await listNeonProducts({
+    limit: PRODUCTS_PER_PAGE,
+    offset: (currentPage - 1) * PRODUCTS_PER_PAGE,
+    categoryId: selectedCategoryId,
+    search: searchQuery,
+  })
+
+  const totalPages = Math.ceil(count / PRODUCTS_PER_PAGE)
+
+  return (
+    <>
+      <ul className="grid grid-cols-2 small:grid-cols-3 gap-x-4 gap-y-8">
+        {products.map((product: NeonProduct) => (
+          <li key={product.product_id}>
+            <NeonProductPreview {...product} />
+          </li>
+        ))}
+      </ul>
+
+      {products.length === 0 && !searchQuery && (
+        <div className="py-12 text-center bg-gray-50 rounded-lg">
+          <p className="text-gray-500 mb-4">
+            No products found in this category.
+          </p>
+          <a
+            href="/store"
+            className="text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            View all products
+          </a>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-8">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            prevLink={`/store?page=${currentPage - 1}${
+              selectedCategoryId ? `&category=${selectedCategoryId}` : ""
+            }${searchQuery ? `&search=${searchQuery}` : ""}`}
+            nextLink={`/store?page=${currentPage + 1}${
+              selectedCategoryId ? `&category=${selectedCategoryId}` : ""
+            }${searchQuery ? `&search=${searchQuery}` : ""}`}
+          />
+        </div>
+      )}
+    </>
+  )
 }
 
 export const metadata: Metadata = {
@@ -30,22 +93,14 @@ export default async function StorePage({ searchParams }: Props) {
     : undefined
   const searchQuery = searchParams.search || ""
 
-  const [{ products, count }, categories, selectedCategoryResult] =
-    await Promise.all([
-      listNeonProducts({
-        limit: PRODUCTS_PER_PAGE,
-        offset: (currentPage - 1) * PRODUCTS_PER_PAGE,
-        categoryId: selectedCategoryId,
-        search: searchQuery,
-      }),
-      getAllCategories(),
-      selectedCategoryId
-        ? getCategoryById(selectedCategoryId)
-        : Promise.resolve(undefined),
-    ])
+  const [categories, selectedCategoryResult] = await Promise.all([
+    getAllCategories(),
+    selectedCategoryId
+      ? getCategoryById(selectedCategoryId)
+      : Promise.resolve(undefined),
+  ])
 
   const selectedCategory = selectedCategoryResult || undefined
-  const totalPages = Math.ceil(count / PRODUCTS_PER_PAGE)
 
   return (
     <div className="content-container py-6">
@@ -70,39 +125,14 @@ export default async function StorePage({ searchParams }: Props) {
         {searchQuery && (
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between">
-              <p className="text-gray-600">
-                {count === 0 ? (
-                  <span className="flex items-center gap-2">
-                    <span className="text-red-500">•</span>
-                    No products found for "{searchQuery}"
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <span className="text-green-500">•</span>
-                    Found {count} product{count === 1 ? "" : "s"} for "
-                    {searchQuery}"
-                  </span>
-                )}
-              </p>
-              {searchQuery && (
-                <a
-                  href="/store"
-                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  Clear search
-                </a>
-              )}
+              <p className="text-gray-600">Searching for "{searchQuery}"...</p>
+              <a
+                href="/store"
+                className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                Clear search
+              </a>
             </div>
-            {count === 0 && (
-              <div className="mt-4 text-gray-500">
-                <p>Suggestions:</p>
-                <ul className="mt-2 list-disc list-inside">
-                  <li>Check for typos</li>
-                  <li>Try using more general keywords</li>
-                  <li>Try searching in a different category</li>
-                </ul>
-              </div>
-            )}
           </div>
         )}
 
@@ -115,44 +145,15 @@ export default async function StorePage({ searchParams }: Props) {
             />
           </div>
 
-          {/* Product Grid */}
+          {/* Product Grid with Loading State */}
           <div className="flex-1">
-            <ul className="grid grid-cols-2 small:grid-cols-3 gap-x-4 gap-y-8">
-              {products.map((product: NeonProduct) => (
-                <li key={product.product_id}>
-                  <NeonProductPreview {...product} />
-                </li>
-              ))}
-            </ul>
-
-            {products.length === 0 && !searchQuery && (
-              <div className="py-12 text-center bg-gray-50 rounded-lg">
-                <p className="text-gray-500 mb-4">
-                  No products found in this category.
-                </p>
-                <a
-                  href="/store"
-                  className="text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  View all products
-                </a>
-              </div>
-            )}
-
-            {totalPages > 1 && (
-              <div className="flex justify-center mt-8">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  prevLink={`/store?page=${currentPage - 1}${
-                    selectedCategoryId ? `&category=${selectedCategoryId}` : ""
-                  }${searchQuery ? `&search=${searchQuery}` : ""}`}
-                  nextLink={`/store?page=${currentPage + 1}${
-                    selectedCategoryId ? `&category=${selectedCategoryId}` : ""
-                  }${searchQuery ? `&search=${searchQuery}` : ""}`}
-                />
-              </div>
-            )}
+            <Suspense fallback={<SkeletonProductGrid />}>
+              <ProductGrid
+                currentPage={currentPage}
+                selectedCategoryId={selectedCategoryId}
+                searchQuery={searchQuery}
+              />
+            </Suspense>
           </div>
         </div>
       </div>
