@@ -1,5 +1,5 @@
-import { Pool } from 'pg'
-import { Category, getProductCategories } from './categories'
+import { Pool } from "pg"
+import { Category, getProductCategories } from "./categories"
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -40,35 +40,66 @@ export type NeonProduct = {
   created_on: Date
   updated_on: Date
   categories?: Category[]
+  tags?: string[]
+  options?: ProductOption[]
+}
+
+export type ProductOption = {
+  option_id: number
+  option_name: string
+  option_code: string
+  display_name: string
+  display_order: number
+  brand?: string
+  values: ProductOptionValue[]
+}
+
+export type ProductOptionValue = {
+  option_value_id: number
+  option_value_name: string
+  option_value_code: string
+  option_value_code2?: string
+  display_name: string
+  option_value_abbreviation: string
+  option_value_abbreviation2?: string
+  price_adjustment: string
+  price_adjustment_addtn?: string
+  price_adjustment_type: string
+  apply_sale: boolean
+  display_order: number
 }
 
 export function formatProductUrl(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 }
 
-export async function listNeonProducts(options: {
-  limit?: number;
-  offset?: number;
-  categoryId?: number;
-} = {}): Promise<{ products: NeonProduct[]; count: number }> {
-  console.log('Starting listNeonProducts');
+export type ListNeonProductsParams = {
+  limit?: number
+  offset?: number
+  categoryId?: number
+  search?: string
+  sortBy?: string
+}
+
+export async function listNeonProducts({
+  limit,
+  offset = 0,
+  categoryId,
+  search,
+  sortBy = "created_on",
+}: ListNeonProductsParams = {}): Promise<{
+  products: NeonProduct[]
+  count: number
+}> {
   const client = await pool.connect()
   try {
-    const { limit, offset = 0, categoryId } = options
+    let queryParams: any[] = []
+    let paramCounter = 1
 
-    let categoryIds = [categoryId];
-    
-    if (categoryId) {
-      const subcategoriesQuery = 'SELECT category_id FROM category WHERE parent_category_id = $1';
-      const subcategoriesResult = await client.query(subcategoriesQuery, [categoryId]);
-      const subcategoryIds = subcategoriesResult.rows.map(row => row.category_id);
-      categoryIds = categoryIds.concat(subcategoryIds);
-    }
-
-    const query = `
+    const baseQuery = `
       WITH product_categories AS (
         SELECT 
           p.*,
@@ -82,78 +113,95 @@ export async function listNeonProducts(options: {
             )
           ) FILTER (WHERE c.category_id IS NOT NULL) as categories
         FROM product p
-        ${categoryId ? `
-          LEFT JOIN product_category_map pcm ON p.product_id = pcm.product_id
-          LEFT JOIN category c ON pcm.category_id = c.category_id
-          WHERE p.status = 1 
-          AND p.product_name IS NOT NULL
-          AND pcm.category_id = ANY($1::int[])
-        ` : `
-          LEFT JOIN product_category_map pcm ON p.product_id = pcm.product_id
-          LEFT JOIN category c ON pcm.category_id = c.category_id
-          WHERE p.status = 1 
-          AND p.product_name IS NOT NULL
-        `}
-        GROUP BY p.product_id
-      )
-      SELECT * FROM product_categories
-      ORDER BY created_on DESC
-      ${limit ? `LIMIT ${categoryId ? '$2' : '$1'}` : ''}
-      ${offset ? `OFFSET ${categoryId ? '$3' : '$2'}` : ''}
+        LEFT JOIN product_category_map pcm ON p.product_id = pcm.product_id
+        LEFT JOIN category c ON pcm.category_id = c.category_id
+        WHERE p.status = 1 
+        AND p.product_name IS NOT NULL
     `
 
-    const queryParams = []
-    if (categoryId) queryParams.push(categoryIds)
-    if (limit) queryParams.push(limit)
-    if (offset) queryParams.push(offset)
-    
-    const result = await client.query(query, queryParams)
-
-    if (!result.rows) {
-      return { products: [], count: 0 }
+    let whereClause = ""
+    if (categoryId) {
+      whereClause += ` AND pcm.category_id = $${paramCounter}`
+      queryParams.push(categoryId)
+      paramCounter++
     }
 
-    const countQuery = `
+    if (search) {
+      whereClause += ` AND (
+        p.product_name ILIKE $${paramCounter}
+        OR p.full_description ILIKE $${paramCounter}
+        OR p.sku_number ILIKE $${paramCounter}
+      )`
+      queryParams.push(`%${search}%`)
+      paramCounter++
+    }
+
+    const query = `
+      ${baseQuery}
+      ${whereClause}
+      GROUP BY p.product_id
+      )
+      SELECT * FROM product_categories
+      ORDER BY ${sortBy} DESC
+      ${limit ? `LIMIT $${paramCounter}` : ""}
+      ${offset ? `OFFSET $${paramCounter + 1}` : ""}
+    `
+
+    if (limit) {
+      queryParams.push(limit)
+      paramCounter++
+    }
+    if (offset) {
+      queryParams.push(offset)
+      paramCounter++
+    }
+
+    const result = await client.query(query, queryParams)
+
+    // Count query
+    let countQueryParams = queryParams.slice(0, paramCounter - (limit ? 2 : 0))
+    const baseCountQuery = `
       SELECT COUNT(DISTINCT p.product_id) as count
       FROM product p
-      ${categoryId ? `
-        LEFT JOIN product_category_map pcm ON p.product_id = pcm.product_id
-        WHERE p.status = 1 
-        AND p.product_name IS NOT NULL
-        AND pcm.category_id = ANY($1::int[])
-      ` : `
-        WHERE p.status = 1 
-        AND p.product_name IS NOT NULL
-      `}
+      LEFT JOIN product_category_map pcm ON p.product_id = pcm.product_id
+      WHERE p.status = 1 
+      AND p.product_name IS NOT NULL
+      ${whereClause}
     `
-    const countResult = await client.query(countQuery, categoryId ? [categoryIds] : [])
+
+    const countResult = await client.query(baseCountQuery, countQueryParams)
     const count = parseInt(countResult.rows[0].count) || 0
 
-    const products: NeonProduct[] = result.rows.map(row => ({
+    const products: NeonProduct[] = result.rows.map((row) => ({
       ...row,
-      price: row.price_text || '0',
+      price: row.price_text || "0",
       old_price: row.old_price_text,
-      categories: row.categories || []
+      categories: row.categories || [],
     }))
 
     return { products, count }
   } catch (error) {
-    console.error('Error in listNeonProducts:', error)
-    throw error
+    console.error("Error in listNeonProducts:", error)
+    return { products: [], count: 0 }
   } finally {
     client.release()
   }
 }
 
-export async function getNeonProductByName(handle: string): Promise<NeonProduct | null> {
+export async function getNeonProductByName(
+  handle: string
+): Promise<NeonProduct | null> {
   if (!handle) {
-    console.error('getNeonProductByName called with empty handle')
+    console.error("getNeonProductByName called with empty handle")
     return null
   }
 
   const client = await pool.connect()
   try {
-    const normalizedHandle = handle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    const normalizedHandle = handle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
 
     const query = `
       SELECT 
@@ -170,9 +218,9 @@ export async function getNeonProductByName(handle: string): Promise<NeonProduct 
         )
       LIMIT 1
     `
-    
+
     const result = await client.query(query, [normalizedHandle])
-    
+
     if (!result.rows[0]) {
       return null
     }
@@ -186,16 +234,18 @@ export async function getNeonProductByName(handle: string): Promise<NeonProduct 
       JOIN product_category_map pcm ON c.category_id = pcm.category_id
       WHERE pcm.product_id = $1
     `
-    const categoriesResult = await client.query(categoriesQuery, [result.rows[0].product_id])
-    
+    const categoriesResult = await client.query(categoriesQuery, [
+      result.rows[0].product_id,
+    ])
+
     return {
       ...result.rows[0],
-      price: result.rows[0].price_text || '0',
+      price: result.rows[0].price_text || "0",
       old_price: result.rows[0].old_price_text,
-      categories: categoriesResult.rows || []
+      categories: categoriesResult.rows || [],
     }
   } catch (error) {
-    console.error('Error in getNeonProductByName:', error, '\nHandle:', handle)
+    console.error("Error in getNeonProductByName:", error, "\nHandle:", handle)
     throw error
   } finally {
     client.release()
@@ -214,27 +264,41 @@ export async function getNeonProduct(id: number): Promise<NeonProduct | null> {
       WHERE p.product_id = $1
     `
     const result = await client.query(query, [id])
-    
+
     if (!result.rows[0]) {
       return null
     }
-    
-    return {
+
+    const product = {
       ...result.rows[0],
-      price: result.rows[0].price_text || '0',
-      old_price: result.rows[0].old_price_text
+      price: result.rows[0].price_text || "0",
+      old_price: result.rows[0].old_price_text,
+    }
+
+    // Fetch tags and options
+    const [tags, options] = await Promise.all([
+      getProductTags(id),
+      getProductOptions(id),
+    ])
+
+    return {
+      ...product,
+      tags,
+      options,
     }
   } finally {
     client.release()
   }
 }
 
-export async function getRelatedNeonProducts(product: NeonProduct): Promise<NeonProduct[]> {
+export async function getRelatedNeonProducts(
+  product: NeonProduct
+): Promise<NeonProduct[]> {
   const relatedIds = [
     product.matching_product_id1,
     product.matching_product_id2,
-    product.matching_product_id3
-  ].filter(id => id !== null)
+    product.matching_product_id3,
+  ].filter((id) => id !== null)
 
   if (relatedIds.length === 0) {
     return []
@@ -250,9 +314,91 @@ export async function getRelatedNeonProducts(product: NeonProduct): Promise<Neon
     [relatedIds]
   )
 
-  return rows.map(row => ({
+  return rows.map((row) => ({
     ...row,
-    price: row.price_text || '0',
-    old_price: row.old_price_text
+    price: row.price_text || "0",
+    old_price: row.old_price_text,
   }))
-} 
+}
+
+export async function getProductTags(productId: number): Promise<string[]> {
+  const client = await pool.connect()
+  try {
+    const query = `
+      SELECT tag_name 
+      FROM product_tag_map 
+      WHERE product_id = $1
+      ORDER BY tag_name
+    `
+    const result = await client.query(query, [productId])
+    return result.rows.map((row) => row.tag_name)
+  } finally {
+    client.release()
+  }
+}
+
+export async function getProductOptions(
+  productId: number
+): Promise<ProductOption[]> {
+  const client = await pool.connect()
+  try {
+    // First get all options for the product
+    const optionsQuery = `
+      SELECT DISTINCT 
+        mo.option_id,
+        mo.option_name,
+        mo.option_code,
+        mo.display_name,
+        mo.display_order,
+        mo.brand
+      FROM master_option mo
+      JOIN master_option_value mov ON mo.option_id = mov.option_id
+      WHERE EXISTS (
+        SELECT 1 
+        FROM product_option_map pom 
+        WHERE pom.product_id = $1 
+        AND pom.option_id = mo.option_id
+      )
+      ORDER BY mo.display_order
+    `
+    const optionsResult = await client.query(optionsQuery, [productId])
+
+    // Then get all option values for these options
+    const options: ProductOption[] = []
+    for (const option of optionsResult.rows) {
+      const valuesQuery = `
+        SELECT 
+          option_value_id,
+          option_value_name,
+          option_value_code,
+          option_value_code2,
+          display_name,
+          option_value_abbreviation,
+          option_value_abbreviation2,
+          CAST(price_adjustment AS TEXT) as price_adjustment,
+          CAST(price_adjustment_addtn AS TEXT) as price_adjustment_addtn,
+          price_adjustment_type,
+          apply_sale,
+          display_order
+        FROM master_option_value
+        WHERE option_id = $1
+        ORDER BY display_order
+      `
+      const valuesResult = await client.query(valuesQuery, [option.option_id])
+
+      options.push({
+        ...option,
+        values: valuesResult.rows.map((row) => ({
+          ...row,
+          apply_sale: row.apply_sale === 1,
+          price_adjustment: row.price_adjustment || "0",
+          price_adjustment_addtn: row.price_adjustment_addtn,
+        })),
+      })
+    }
+
+    return options
+  } finally {
+    client.release()
+  }
+}
