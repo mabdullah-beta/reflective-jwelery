@@ -1,6 +1,6 @@
 import { Text } from "@medusajs/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { NeonProduct } from "@lib/data/neon-products"
+import { NeonProduct, formatProductUrl } from "@lib/data/neon-products"
 
 export default function NeonProductPreview({
   product_id,
@@ -21,13 +21,11 @@ export default function NeonProductPreview({
     return isNaN(numericPrice) ? '0.00' : numericPrice.toFixed(2)
   }
 
-  const formatProductUrl = (name: string) => {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-  }
+  const formattedUrl = formatProductUrl(product_name)
 
   return (
     <LocalizedClientLink
-      href={`/store/products/${formatProductUrl(product_name)}`}
+      href={`/store/products/${formattedUrl}`}
       className="group"
     >
       <div>

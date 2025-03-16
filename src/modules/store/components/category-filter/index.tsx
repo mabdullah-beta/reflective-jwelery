@@ -24,26 +24,38 @@ export default function CategoryFilter({ categories, selectedCategoryId }: Categ
       params.set('category', categoryId.toString())
     }
     
-    router.push(`/store/products?${params.toString()}`)
+    router.push(`/store?${params.toString()}`)
   }
+
+  // Organize categories into a hierarchy
+  const parentCategories = categories.filter(cat => cat.parent_category_id === null)
+  const getChildCategories = (parentId: number) => 
+    categories.filter(cat => cat.parent_category_id === parentId)
+
+  const renderCategory = (category: Category, level: number = 0) => (
+    <div key={category.category_id} style={{ marginLeft: `${level * 16}px` }}>
+      <button
+        onClick={() => handleCategoryClick(category.category_id)}
+        className={`text-left px-4 py-2 w-full rounded-md transition-colors ${
+          selectedCategoryId === category.category_id
+            ? 'bg-gray-100 text-ui-fg-base'
+            : 'hover:bg-gray-50 text-ui-fg-subtle'
+        }`}
+      >
+        <Text className="text-sm">{category.category_name}</Text>
+      </button>
+      {/* Render child categories recursively */}
+      {getChildCategories(category.category_id).map(child => 
+        renderCategory(child, level + 1)
+      )}
+    </div>
+  )
 
   return (
     <div className="flex flex-col gap-4">
       <Text className="text-ui-fg-base font-semibold">Categories</Text>
       <div className="flex flex-col gap-2">
-        {categories.map((category) => (
-          <button
-            key={category.category_id}
-            onClick={() => handleCategoryClick(category.category_id)}
-            className={`text-left px-4 py-2 rounded-md transition-colors ${
-              selectedCategoryId === category.category_id
-                ? 'bg-gray-100 text-ui-fg-base'
-                : 'hover:bg-gray-50 text-ui-fg-subtle'
-            }`}
-          >
-            <Text className="text-sm">{category.category_name}</Text>
-          </button>
-        ))}
+        {parentCategories.map(category => renderCategory(category))}
       </div>
     </div>
   )

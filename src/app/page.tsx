@@ -1,6 +1,6 @@
 import { Metadata } from "next"
 import Hero from "@modules/home/components/hero"
-import { listNeonProducts } from "@lib/data/neon-products"
+import { listNeonProducts, NeonProduct } from "@lib/data/neon-products"
 import NeonProductPreview from "@modules/products/components/neon-product-preview"
 
 export const metadata: Metadata = {
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 }
 
 export default async function Home() {
-  const products = await listNeonProducts(6)
+  const { products } = await listNeonProducts({ limit: 6 })
   
   // Log the products data
   console.log('Homepage Products:', JSON.stringify(products, null, 2))
@@ -26,7 +26,7 @@ export default async function Home() {
             </p>
           </div>
           <ul className="grid grid-cols-2 small:grid-cols-3 gap-x-4 gap-y-8">
-            {products.map((product) => (
+            {products.map((product: NeonProduct) => (
               <li key={`product-${product.product_id}`}>
                 <NeonProductPreview {...product} />
               </li>

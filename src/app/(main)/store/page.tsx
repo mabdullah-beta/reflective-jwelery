@@ -1,14 +1,18 @@
 import { Heading } from "@medusajs/ui"
 import { listNeonProducts } from "@lib/data/neon-products"
-import { getAllCategories, getCategoryById } from "@lib/data/categories"
+import { getAllCategories, getCategoryById, Category } from "@lib/data/categories"
 import NeonProductPreview from "@modules/products/components/neon-product-preview"
 import CategoryFilter from "@modules/store/components/category-filter"
 import CategoryBreadcrumb from "@modules/store/components/category-breadcrumb"
 import { Metadata } from "next"
+import Pagination from "@modules/common/components/pagination"
+
+const PRODUCTS_PER_PAGE = 12
 
 type Props = {
   searchParams: {
     category?: string
+    page?: string
   }
 }
 
@@ -18,20 +22,21 @@ export const metadata: Metadata = {
 }
 
 export default async function StorePage({ searchParams }: Props) {
+  const currentPage = searchParams.page ? parseInt(searchParams.page) : 1
   const selectedCategoryId = searchParams.category ? parseInt(searchParams.category) : undefined
 
-  const [products, categories, selectedCategory] = await Promise.all([
-    listNeonProducts(),
+  const [{ products, count }, categories, selectedCategoryResult] = await Promise.all([
+    listNeonProducts({
+      limit: PRODUCTS_PER_PAGE,
+      offset: (currentPage - 1) * PRODUCTS_PER_PAGE,
+      categoryId: selectedCategoryId
+    }),
     getAllCategories(),
-    selectedCategoryId ? getCategoryById(selectedCategoryId).then(cat => cat || undefined) : Promise.resolve(undefined)
+    selectedCategoryId ? getCategoryById(selectedCategoryId) : Promise.resolve(undefined)
   ])
 
-  // Filter products by category if a category is selected
-  const filteredProducts = selectedCategoryId
-    ? products.filter(product => 
-        product.categories?.some(category => category.category_id === selectedCategoryId)
-      )
-    : products
+  const selectedCategory = selectedCategoryResult || undefined
+  const totalPages = Math.ceil(count / PRODUCTS_PER_PAGE)
 
   return (
     <div className="content-container py-6">
@@ -62,16 +67,27 @@ export default async function StorePage({ searchParams }: Props) {
           {/* Product Grid */}
           <div className="flex-1">
             <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-4 gap-y-8">
-              {filteredProducts.map((product) => (
+              {products.map((product) => (
                 <li key={product.product_id}>
                   <NeonProductPreview {...product} />
                 </li>
               ))}
             </ul>
             
-            {filteredProducts.length === 0 && (
+            {products.length === 0 && (
               <div className="py-8 text-center">
                 <p className="text-gray-500">No products found in this category.</p>
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-8">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  prevLink={`/store?page=${currentPage - 1}${selectedCategoryId ? `&category=${selectedCategoryId}` : ''}`}
+                  nextLink={`/store?page=${currentPage + 1}${selectedCategoryId ? `&category=${selectedCategoryId}` : ''}`}
+                />
               </div>
             )}
           </div>
