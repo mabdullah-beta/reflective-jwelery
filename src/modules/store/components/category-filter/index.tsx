@@ -1,62 +1,135 @@
 "use client"
 
-import { Text } from "@medusajs/ui"
 import { Category } from "@lib/data/categories"
-import { useRouter, useSearchParams } from "next/navigation"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { ChevronDown, ChevronRight } from "lucide-react"
+import { useState } from "react"
 
-type CategoryFilterProps = {
+interface CategoryFilterProps {
   categories: Category[]
   selectedCategoryId?: number
 }
 
-export default function CategoryFilter({ categories, selectedCategoryId }: CategoryFilterProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+type CategoryWithChildren = Category & {
+  children?: CategoryWithChildren[]
+}
 
-  const handleCategoryClick = (categoryId: number) => {
-    const params = new URLSearchParams(searchParams.toString())
-    
-    if (selectedCategoryId === categoryId) {
-      // If clicking the same category, remove the filter
-      params.delete('category')
-    } else {
-      // Otherwise, set the new category filter
-      params.set('category', categoryId.toString())
-    }
-    
-    router.push(`/store?${params.toString()}`)
+const CategoryFilter = ({ categories, selectedCategoryId }: CategoryFilterProps) => {
+  // Organize categories into a tree structure
+  const organizeCategories = (cats: Category[]): CategoryWithChildren[] => {
+    const categoryMap = new Map<number, CategoryWithChildren>()
+    const rootCategories: CategoryWithChildren[] = []
+
+    // First pass: create all category objects
+    cats.forEach(cat => {
+      categoryMap.set(cat.category_id, { ...cat, children: [] })
+    })
+
+    // Second pass: organize into tree structure
+    cats.forEach(cat => {
+      const category = categoryMap.get(cat.category_id)!
+      if (cat.parent_category_id === null) {
+        rootCategories.push(category)
+      } else {
+        const parent = categoryMap.get(cat.parent_category_id)
+        if (parent) {
+          if (!parent.children) parent.children = []
+          parent.children.push(category)
+        }
+      }
+    })
+
+    return rootCategories
   }
 
-  // Organize categories into a hierarchy
-  const parentCategories = categories.filter(cat => cat.parent_category_id === null)
-  const getChildCategories = (parentId: number) => 
-    categories.filter(cat => cat.parent_category_id === parentId)
+  const [expandedCategories, setExpandedCategories] = useState<number[]>([])
+  const rootCategories = organizeCategories(categories)
 
-  const renderCategory = (category: Category, level: number = 0) => (
-    <div key={category.category_id} style={{ marginLeft: `${level * 16}px` }}>
-      <button
-        onClick={() => handleCategoryClick(category.category_id)}
-        className={`text-left px-4 py-2 w-full rounded-md transition-colors ${
-          selectedCategoryId === category.category_id
-            ? 'bg-gray-100 text-ui-fg-base'
-            : 'hover:bg-gray-50 text-ui-fg-subtle'
-        }`}
-      >
-        <Text className="text-sm">{category.category_name}</Text>
-      </button>
-      {/* Render child categories recursively */}
-      {getChildCategories(category.category_id).map(child => 
-        renderCategory(child, level + 1)
-      )}
-    </div>
-  )
+  const toggleCategory = (categoryId: number) => {
+    setExpandedCategories(prev => 
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    )
+  }
+
+  const CategoryItem = ({ category, level = 0 }: { category: CategoryWithChildren, level?: number }) => {
+    const hasChildren = category.children && category.children.length > 0
+    const isExpanded = expandedCategories.includes(category.category_id)
+    const isSelected = category.category_id === selectedCategoryId
+
+    return (
+      <div className="w-full">
+        <div className={`flex items-center gap-1 group ${level > 0 ? 'ml-4' : ''}`}>
+          {hasChildren && (
+            <button
+              onClick={() => toggleCategory(category.category_id)}
+              className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-gray-600" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              )}
+            </button>
+          )}
+          {!hasChildren && <div className="w-6" />}
+          <LocalizedClientLink
+            href={`/store?category=${category.category_id}`}
+            className={`
+              py-2 px-2 rounded-md text-sm flex-grow transition-colors
+              hover:bg-gray-100
+              ${isSelected ? 'bg-gray-100 font-medium text-blue-600' : 'text-gray-700'}
+            `}
+          >
+            <span className="flex items-center justify-between">
+              <span>{category.category_name}</span>
+              {hasChildren && (
+                <span className="text-xs text-gray-500">
+                  {category.children?.length}
+                </span>
+              )}
+            </span>
+          </LocalizedClientLink>
+        </div>
+        {hasChildren && isExpanded && (
+          <div className="mt-1">
+            {category.children?.map(child => (
+              <CategoryItem 
+                key={child.category_id} 
+                category={child} 
+                level={level + 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
-    <div className="flex flex-col gap-4">
-      <Text className="text-ui-fg-base font-semibold">Categories</Text>
-      <div className="flex flex-col gap-2">
-        {parentCategories.map(category => renderCategory(category))}
+    <div className="w-full">
+      <h2 className="text-lg font-medium mb-4">Categories</h2>
+      <div className="flex flex-col gap-1">
+        <LocalizedClientLink
+          href="/store"
+          className={`
+            py-2 px-2 rounded-md text-sm transition-colors
+            hover:bg-gray-100
+            ${!selectedCategoryId ? 'bg-gray-100 font-medium text-blue-600' : 'text-gray-700'}
+          `}
+        >
+          All Products
+        </LocalizedClientLink>
+        {rootCategories.map(category => (
+          <CategoryItem 
+            key={category.category_id} 
+            category={category}
+          />
+        ))}
       </div>
     </div>
   )
-} 
+}
+
+export default CategoryFilter 
