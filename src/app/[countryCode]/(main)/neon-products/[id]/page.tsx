@@ -38,19 +38,61 @@ export default async function NeonProductPage({ params }: Props) {
               {product.product_name}
             </Heading>
             {product.brand && (
-              <Text className="text-ui-fg-subtle mb-4">Brand: {product.brand}</Text>
+              <Text className="text-ui-fg-subtle mb-4">
+                Brand: {product.brand}
+              </Text>
             )}
           </div>
 
           <div className="flex items-center gap-x-4">
-            <Text className="text-xl-semi">
-              ${product.price.toFixed(2)}
-            </Text>
-            {product.old_price && (
-              <Text className="text-ui-fg-muted line-through">
-                ${product.old_price.toFixed(2)}
-              </Text>
-            )}
+            {(() => {
+              const parsedPrice = parseFloat(
+                product.price?.replace(/[^0-9.-]+/g, "") || "0"
+              )
+              if (
+                !product.price ||
+                product.price.trim() === "" ||
+                product.price === "null" ||
+                isNaN(parsedPrice) ||
+                parsedPrice <= 0
+              ) {
+                return (
+                  <button className="px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors duration-200 flex items-center gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                    </svg>
+                    Call for Pricing
+                  </button>
+                )
+              }
+              return (
+                <Text className="text-xl-semi">${parsedPrice.toFixed(2)}</Text>
+              )
+            })()}
+            {(() => {
+              const parsedOldPrice = parseFloat(
+                product.old_price?.replace(/[^0-9.-]+/g, "") || "0"
+              )
+              if (
+                product.old_price &&
+                product.old_price.trim() !== "" &&
+                product.old_price !== "null" &&
+                !isNaN(parsedOldPrice) &&
+                parsedOldPrice > 0
+              ) {
+                return (
+                  <Text className="text-ui-fg-muted line-through">
+                    ${parsedOldPrice.toFixed(2)}
+                  </Text>
+                )
+              }
+              return null
+            })()}
           </div>
 
           {product.full_description && (
@@ -81,7 +123,9 @@ export default async function NeonProductPage({ params }: Props) {
             {product.size && (
               <div>
                 <Text className="font-semibold">Size</Text>
-                <Text>{product.size} {product.size_unit || ''}</Text>
+                <Text>
+                  {product.size} {product.size_unit || ""}
+                </Text>
               </div>
             )}
           </div>
@@ -117,7 +161,7 @@ export default async function NeonProductPage({ params }: Props) {
           <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
             {relatedProducts.map((relatedProduct) => (
               <li key={relatedProduct.product_id}>
-                <NeonProductPreview product={relatedProduct} />
+                <NeonProductPreview {...relatedProduct} />
               </li>
             ))}
           </ul>
@@ -146,7 +190,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: product.meta_title || product.product_name,
-    description: product.meta_description || product.full_description || undefined,
+    description:
+      product.meta_description || product.full_description || undefined,
     keywords: product.meta_keywords || undefined,
   }
-} 
+}

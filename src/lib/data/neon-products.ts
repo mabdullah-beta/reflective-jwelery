@@ -198,7 +198,7 @@ export async function listNeonProducts({
 
     const products: NeonProduct[] = result.rows.map((row) => ({
       ...row,
-      price: row.price_text || "0",
+      price: row.price_text || null,
       old_price: row.old_price_text,
       categories: row.categories || [],
     }))
@@ -264,7 +264,7 @@ export async function getNeonProductByName(
 
     return {
       ...result.rows[0],
-      price: result.rows[0].price_text || "0",
+      price: result.rows[0].price_text || null,
       old_price: result.rows[0].old_price_text,
       categories: categoriesResult.rows || [],
     }
@@ -295,7 +295,7 @@ export async function getNeonProduct(id: number): Promise<NeonProduct | null> {
 
     const product = {
       ...result.rows[0],
-      price: result.rows[0].price_text || "0",
+      price: result.rows[0].price_text || null,
       old_price: result.rows[0].old_price_text,
     }
 
