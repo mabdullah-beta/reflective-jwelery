@@ -93,11 +93,17 @@ export default async function StorePage({ searchParams }: Props) {
     : undefined
   const searchQuery = searchParams.search || ""
 
-  const [categories, selectedCategoryResult] = await Promise.all([
+  const [categories, selectedCategoryResult, { count }] = await Promise.all([
     getAllCategories(),
     selectedCategoryId
       ? getCategoryById(selectedCategoryId)
       : Promise.resolve(undefined),
+    listNeonProducts({
+      limit: PRODUCTS_PER_PAGE,
+      offset: (currentPage - 1) * PRODUCTS_PER_PAGE,
+      categoryId: selectedCategoryId,
+      search: searchQuery,
+    }),
   ])
 
   const selectedCategory = selectedCategoryResult || undefined
@@ -125,7 +131,14 @@ export default async function StorePage({ searchParams }: Props) {
         {searchQuery && (
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between">
-              <p className="text-gray-600">Searching for "{searchQuery}"...</p>
+              <div>
+                <p className="text-gray-600">
+                  Searching for "{searchQuery}"...
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {count} {count === 1 ? "product" : "products"} found
+                </p>
+              </div>
               <a
                 href="/store"
                 className="text-sm text-blue-600 hover:text-blue-800 transition-colors"

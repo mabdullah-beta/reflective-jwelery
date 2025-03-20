@@ -132,6 +132,17 @@ export async function listNeonProducts({
         p.product_name ILIKE $${paramCounter}
         OR p.full_description ILIKE $${paramCounter}
         OR p.sku_number ILIKE $${paramCounter}
+        OR p.brand ILIKE $${paramCounter}
+        OR p.meta_keywords ILIKE $${paramCounter}
+        OR p.meta_description ILIKE $${paramCounter}
+        OR p.meta_title ILIKE $${paramCounter}
+        OR p.dimension ILIKE $${paramCounter}
+        OR p.dimension_name ILIKE $${paramCounter}
+        OR p.size ILIKE $${paramCounter}
+        OR p.for_gender ILIKE $${paramCounter}
+        OR p.source ILIKE $${paramCounter}
+        OR p.metal_string_temp ILIKE $${paramCounter}
+        OR p.addtn_attributes ILIKE $${paramCounter}
       )`
       queryParams.push(`%${search}%`)
       paramCounter++
