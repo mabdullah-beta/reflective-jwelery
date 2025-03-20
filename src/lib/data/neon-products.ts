@@ -117,6 +117,7 @@ export async function listNeonProducts({
         LEFT JOIN category c ON pcm.category_id = c.category_id
         WHERE p.status = 1 
         AND p.product_name IS NOT NULL
+        AND TRIM(p.product_name) != ''
     `
 
     let whereClause = ""
@@ -164,6 +165,12 @@ export async function listNeonProducts({
     // Combine all parameters
     const mainQueryParams = [...queryParams, ...paginationParams]
     const result = await client.query(mainQuery, mainQueryParams)
+
+    // Log the results for debugging
+    console.log(
+      "Products with null or empty names:",
+      result.rows.filter((p) => !p.product_name || p.product_name.trim() === "")
+    )
 
     // Count query (excluding pagination parameters)
     const countQuery = `
