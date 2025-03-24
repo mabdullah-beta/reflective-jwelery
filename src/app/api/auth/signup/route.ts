@@ -20,9 +20,17 @@ export async function POST(request: Request) {
       )
     }
 
-    // Insert the new customer without password for now
+    // Get the next user_id from the sequence
+    const nextUserIdResult = await sql`
+      SELECT COALESCE(MAX(user_id), 0) + 1 as next_user_id 
+      FROM customer
+    `
+    const nextUserId = nextUserIdResult.rows[0].next_user_id
+
+    // Insert the new customer with user_id
     const result = await sql`
       INSERT INTO customer (
+        user_id,
         first_name,
         last_name,
         email,
@@ -32,6 +40,7 @@ export async function POST(request: Request) {
         active,
         registration_date
       ) VALUES (
+        ${nextUserId},
         ${credentials.first_name},
         ${credentials.last_name},
         ${credentials.email},
