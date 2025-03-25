@@ -16,6 +16,11 @@ type WishlistTemplateProps = {
       price: number
       thumbnail?: string
       added_at: string
+      images?: Array<{
+        filename: string
+        file_path: string
+        media_caption?: string
+      }>
     }>
   }
 }
@@ -29,6 +34,19 @@ export default function WishlistTemplate({ wishlist }: WishlistTemplateProps) {
     type: "success" | "error"
     message: string
   } | null>(null)
+
+  const getImageUrl = (item: WishlistTemplateProps["wishlist"]["items"][0]) => {
+    if (!item.images?.length) return item.thumbnail
+
+    const image = item.images[0]
+    const cleanFilename = image.filename.trim().replace(/^[./\\]+/, "")
+
+    if (image.file_path.includes("MerchantShoppingCartImages/MGenImages_1/")) {
+      return `/images/artisans/${encodeURIComponent(cleanFilename)}`
+    }
+
+    return `/images/products/${encodeURIComponent(cleanFilename)}`
+  }
 
   const handleRemove = async (productId: string) => {
     setLoadingStates((prev) => ({ ...prev, [productId]: true }))
@@ -58,12 +76,14 @@ export default function WishlistTemplate({ wishlist }: WishlistTemplateProps) {
     setLoadingStates((prev) => ({ ...prev, [item.product_id]: true }))
     setError(null)
     try {
+      const imageUrl = getImageUrl(item)
       await addToNeonCart({
         productId: item.product_id,
         quantity: 1,
         productName: item.product_name,
         price: item.price,
         stockQuantity: 999, // We'll need to implement proper stock management
+        thumbnail: imageUrl,
       })
       await handleRemove(item.product_id)
       setShowMessage({
@@ -184,9 +204,9 @@ export default function WishlistTemplate({ wishlist }: WishlistTemplateProps) {
                     className="flex-shrink-0"
                   >
                     <div className="w-24 h-24 bg-gray-100 rounded-md flex items-center justify-center">
-                      {item.thumbnail ? (
+                      {getImageUrl(item) ? (
                         <img
-                          src={item.thumbnail}
+                          src={getImageUrl(item)}
                           alt={item.product_name}
                           className="w-full h-full object-cover rounded-md"
                         />

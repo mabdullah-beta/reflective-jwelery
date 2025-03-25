@@ -1,7 +1,30 @@
 import { Text } from "@medusajs/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { NeonProduct, formatProductUrl } from "@lib/data/neon-products"
+import { NeonProduct } from "@lib/data/neon-products"
 import { formatPrice } from "@lib/util/format-price"
+import { formatProductUrl } from "@lib/util/format-product-url"
+import Image from "next/image"
+
+const getImageUrl = (image: any) => {
+  if (!image) {
+    console.log("No image data provided")
+    return null
+  }
+
+  // Clean up the filename - remove any path-like characters and trim
+  const cleanFilename = image.filename.trim().replace(/^[./\\]+/, "")
+
+  // Handle different path patterns
+  if (image.file_path.includes("MerchantShoppingCartImages/MGenImages_1/")) {
+    const url = `/images/artisans/${encodeURIComponent(cleanFilename)}`
+    console.log("Artisan image URL:", url)
+    return url
+  }
+
+  const url = `/images/products/${encodeURIComponent(cleanFilename)}`
+  console.log("Product image URL:", url)
+  return url
+}
 
 export default function NeonProductPreview({
   product_id,
@@ -15,9 +38,22 @@ export default function NeonProductPreview({
   free_shipping,
   for_gender,
   categories,
+  images,
 }: NeonProduct) {
   const formattedPrice = formatPrice(price)
   const formattedUrl = formatProductUrl(product_name)
+
+  // Get the main product image (first image or null)
+  const mainImage = images?.[0]
+  const imageUrl = getImageUrl(mainImage)
+
+  console.log("Product Details:", {
+    product_id,
+    product_name,
+    totalImages: images?.length || 0,
+    mainImage: mainImage?.filename,
+    imageUrl,
+  })
 
   return (
     <LocalizedClientLink
@@ -26,19 +62,32 @@ export default function NeonProductPreview({
     >
       <div>
         <div className="relative aspect-[29/34] w-full overflow-hidden rounded-lg bg-gray-100">
-          <div className="absolute bottom-2 left-2 flex flex-col gap-1">
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={mainImage?.media_caption || product_name}
+              fill
+              className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <Text className="text-ui-fg-subtle">No image available</Text>
+            </div>
+          )}
+          <div className="absolute top-2 left-2 flex flex-col gap-2 z-10">
             {stock_quantity === 0 && (
-              <Text className="text-ui-fg-base bg-white px-2 py-1 rounded-md">
+              <Text className="text-ui-fg-base bg-white/90 px-2 py-1 rounded-md">
                 Out of stock
               </Text>
             )}
             {free_shipping === 1 && (
-              <Text className="text-ui-fg-base bg-green-100 px-2 py-1 rounded-md text-sm">
+              <Text className="text-ui-fg-base bg-green-100/90 px-2 py-1 rounded-md text-sm">
                 Free Shipping
               </Text>
             )}
             {for_gender && (
-              <Text className="text-ui-fg-base bg-blue-100 px-2 py-1 rounded-md text-sm">
+              <Text className="text-ui-fg-base bg-blue-100/90 px-2 py-1 rounded-md text-sm">
                 {for_gender === "FM" || for_gender === "MF"
                   ? "Male and Female"
                   : for_gender === "M"
@@ -49,14 +98,14 @@ export default function NeonProductPreview({
               </Text>
             )}
             {categories && categories.length > 0 && (
-              <Text className="text-ui-fg-base bg-gray-100 px-2 py-1 rounded-md text-sm">
+              <Text className="text-ui-fg-base bg-gray-100/90 px-2 py-1 rounded-md text-sm">
                 {categories[0].category_name}
                 {categories.length > 1 && " +" + (categories.length - 1)}
               </Text>
             )}
           </div>
         </div>
-        <div className="mt-2">
+        <div className="mt-4">
           <Text className="text-ui-fg-subtle">{product_name}</Text>
           <div className="mt-1 flex items-center justify-between">
             {formattedPrice.display === "Call for Pricing" ? (

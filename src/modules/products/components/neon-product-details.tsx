@@ -40,12 +40,20 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     setIsLoading(true)
 
     try {
+      // Get the first image URL for the thumbnail
+      const thumbnail = product.images?.[0]?.file_path
+        ? `/images/products/${encodeURIComponent(
+            product.images[0].filename.trim().replace(/^[./\\]+/, "")
+          )}`
+        : undefined
+
       await addToNeonCart({
         productId: product.product_id.toString(),
         quantity: 1,
         productName: product.product_name,
         price: Number(product.price),
         stockQuantity: product.stock_quantity || 0,
+        thumbnail,
       })
       window.location.href = "/store/cart"
     } catch (error) {
@@ -65,10 +73,18 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         setShowWishlistMessage(true)
         setTimeout(() => setShowWishlistMessage(false), 3000)
       } else {
+        // Get the first image URL for the thumbnail
+        const thumbnail = product.images?.[0]?.file_path
+          ? `/images/products/${encodeURIComponent(
+              product.images[0].filename.trim().replace(/^[./\\]+/, "")
+            )}`
+          : undefined
+
         await addToWishlist({
           productId: product.product_id.toString(),
           productName: product.product_name,
           price: Number(product.price),
+          thumbnail,
         })
         setIsInWishlistState(true)
         setShowWishlistMessage(true)

@@ -9,6 +9,8 @@ import NeonProductPreview from "@modules/products/components/neon-product-previe
 import { Suspense } from "react"
 import { formatPrice, formatOldPrice } from "@lib/util/format-price"
 import ProductDetails from "@modules/products/components/neon-product-details"
+import Image from "next/image"
+import ProductImageGallery from "@modules/products/components/product-image-gallery"
 
 // Add metadata export for better SEO
 export const dynamic = "force-dynamic"
@@ -16,6 +18,20 @@ export const revalidate = 3600 // Revalidate every hour
 
 type Props = {
   params: { handle: string }
+}
+
+const getImageUrl = (image: any) => {
+  if (!image) return null
+
+  // Clean up the filename - remove any path-like characters and trim
+  const cleanFilename = image.filename.trim().replace(/^[./\\]+/, "")
+
+  // Handle different path patterns
+  if (image.file_path.includes("MerchantShoppingCartImages/MGenImages_1/")) {
+    return `/images/artisans/${encodeURIComponent(cleanFilename)}`
+  }
+
+  return `/images/products/${encodeURIComponent(cleanFilename)}`
 }
 
 // Separate related products component
@@ -64,15 +80,32 @@ export default async function ProductPage({ params }: Props) {
 
     const relatedProducts = await getRelatedNeonProducts(product)
 
+    // Process images and filter out any with null URLs
+    const images =
+      product.images
+        ?.map((image) => {
+          const url = getImageUrl(image)
+          if (!url) return null
+          return {
+            media_id: image.media_id,
+            url,
+            alt: image.media_caption || product.product_name,
+            media_caption: image.media_caption || undefined,
+          }
+        })
+        .filter(
+          (image): image is NonNullable<typeof image> => image !== null
+        ) || []
+
     return (
       <div className="content-container py-6">
         <div className="grid grid-cols-1 small:grid-cols-2 gap-8">
-          {/* Product Image with optimization */}
-          <div className="relative aspect-[29/34] w-full bg-gray-100 rounded-lg overflow-hidden">
-            {/* Since we don't have assets yet, show placeholder */}
-            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-              <span className="text-gray-400">Product image coming soon</span>
-            </div>
+          {/* Product Images */}
+          <div className="sticky top-0">
+            <ProductImageGallery
+              images={images}
+              productName={product.product_name}
+            />
           </div>
 
           {/* Product Details with Suspense boundary */}

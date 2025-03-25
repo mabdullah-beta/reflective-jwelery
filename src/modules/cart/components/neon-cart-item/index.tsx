@@ -9,6 +9,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import Spinner from "@modules/common/icons/spinner"
 import { useState } from "react"
 import { formatPrice } from "@lib/util/format-price"
+import { formatProductUrl } from "@lib/util/format-product-url"
 
 type NeonCartItemProps = {
   item: {
@@ -61,7 +62,7 @@ const NeonCartItem = ({ item }: NeonCartItemProps) => {
     <Table.Row className="border-b border-gray-200 last:border-b-0">
       <Table.Cell className="!pl-0 py-4 w-[100px]">
         <LocalizedClientLink
-          href={`/store/products/${item.product_id}`}
+          href={`/store/products/${formatProductUrl(item.product_name)}`}
           className="flex w-[80px]"
         >
           <div className="w-[80px] h-[80px] bg-gray-100 rounded-md flex items-center justify-center">
@@ -81,7 +82,7 @@ const NeonCartItem = ({ item }: NeonCartItemProps) => {
       <Table.Cell className="py-4">
         <div className="flex flex-col gap-y-2">
           <LocalizedClientLink
-            href={`/store/products/${item.product_id}`}
+            href={`/store/products/${formatProductUrl(item.product_name)}`}
             className="hover:text-gray-900"
           >
             <Text className="font-medium">{item.product_name}</Text>

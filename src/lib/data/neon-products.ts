@@ -1,5 +1,6 @@
 import { Pool } from "pg"
 import { Category, getProductCategories } from "./categories"
+import { formatProductUrl } from "../util/format-product-url"
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -42,6 +43,15 @@ export type NeonProduct = {
   categories?: Category[]
   tags?: string[]
   options?: ProductOption[]
+  images?: {
+    media_id: number
+    filename: string
+    media_desc: string
+    file_path: string
+    media_caption: string | null
+    picture_tag: string | null
+    brand: string | null
+  }[]
 }
 
 export type ProductOption = {
@@ -67,13 +77,6 @@ export type ProductOptionValue = {
   price_adjustment_type: string
   apply_sale: boolean
   display_order: number
-}
-
-export function formatProductUrl(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
 }
 
 export type ListNeonProductsParams = {
@@ -111,10 +114,23 @@ export async function listNeonProducts({
               'category_name', c.category_name,
               'parent_category_id', c.parent_category_id
             )
-          ) FILTER (WHERE c.category_id IS NOT NULL) as categories
+          ) FILTER (WHERE c.category_id IS NOT NULL) as categories,
+          jsonb_agg(
+            DISTINCT jsonb_build_object(
+              'media_id', m.media_id,
+              'filename', m.filename,
+              'media_desc', m.media_desc,
+              'file_path', m.file_path,
+              'media_caption', m.media_caption,
+              'picture_tag', m.picture_tag,
+              'brand', m.brand
+            )
+          ) FILTER (WHERE m.media_id IS NOT NULL) as images
         FROM product p
         LEFT JOIN product_category_map pcm ON p.product_id = pcm.product_id
         LEFT JOIN category c ON pcm.category_id = c.category_id
+        LEFT JOIN product_media_map pmm ON p.product_id = pmm.product_id
+        LEFT JOIN media m ON pmm.media_id = m.media_id
         WHERE p.status = 1 
         AND p.product_name IS NOT NULL
         AND TRIM(p.product_name) != ''
@@ -201,6 +217,7 @@ export async function listNeonProducts({
       price: row.price_text || null,
       old_price: row.old_price_text,
       categories: row.categories || [],
+      images: row.images || [],
     }))
 
     return { products, count }
@@ -231,8 +248,21 @@ export async function getNeonProductByName(
       SELECT 
         p.*,
         CAST(p.price AS TEXT) as price_text,
-        CAST(p.old_price AS TEXT) as old_price_text
+        CAST(p.old_price AS TEXT) as old_price_text,
+        jsonb_agg(
+          DISTINCT jsonb_build_object(
+            'media_id', m.media_id,
+            'filename', m.filename,
+            'media_desc', m.media_desc,
+            'file_path', m.file_path,
+            'media_caption', m.media_caption,
+            'picture_tag', m.picture_tag,
+            'brand', m.brand
+          )
+        ) FILTER (WHERE m.media_id IS NOT NULL) as images
       FROM product p
+      LEFT JOIN product_media_map pmm ON p.product_id = pmm.product_id
+      LEFT JOIN media m ON pmm.media_id = m.media_id
       WHERE p.status = 1 
         AND p.product_name IS NOT NULL
         AND p.product_id IN (
@@ -240,6 +270,7 @@ export async function getNeonProductByName(
           FROM product 
           WHERE LOWER(REPLACE(REGEXP_REPLACE(product_name, '[^a-zA-Z0-9]+', '-', 'g'), '--', '-')) = LOWER($1)
         )
+      GROUP BY p.product_id
       LIMIT 1
     `
 
@@ -267,6 +298,7 @@ export async function getNeonProductByName(
       price: result.rows[0].price_text || null,
       old_price: result.rows[0].old_price_text,
       categories: categoriesResult.rows || [],
+      images: result.rows[0].images || [],
     }
   } catch (error) {
     console.error("Error in getNeonProductByName:", error, "\nHandle:", handle)
@@ -283,9 +315,23 @@ export async function getNeonProduct(id: number): Promise<NeonProduct | null> {
       SELECT 
         p.*,
         CAST(p.price AS TEXT) as price_text,
-        CAST(p.old_price AS TEXT) as old_price_text
+        CAST(p.old_price AS TEXT) as old_price_text,
+        jsonb_agg(
+          DISTINCT jsonb_build_object(
+            'media_id', m.media_id,
+            'filename', m.filename,
+            'media_desc', m.media_desc,
+            'file_path', m.file_path,
+            'media_caption', m.media_caption,
+            'picture_tag', m.picture_tag,
+            'brand', m.brand
+          )
+        ) FILTER (WHERE m.media_id IS NOT NULL) as images
       FROM product p
+      LEFT JOIN product_media_map pmm ON p.product_id = pmm.product_id
+      LEFT JOIN media m ON pmm.media_id = m.media_id
       WHERE p.product_id = $1
+      GROUP BY p.product_id
     `
     const result = await client.query(query, [id])
 
@@ -297,6 +343,7 @@ export async function getNeonProduct(id: number): Promise<NeonProduct | null> {
       ...result.rows[0],
       price: result.rows[0].price_text || null,
       old_price: result.rows[0].old_price_text,
+      images: result.rows[0].images || [],
     }
 
     // Fetch tags and options
