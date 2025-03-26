@@ -4,27 +4,7 @@ import { NeonProduct } from "@lib/data/neon-products"
 import { formatPrice } from "@lib/util/format-price"
 import { formatProductUrl } from "@lib/util/format-product-url"
 import Image from "next/image"
-
-const getImageUrl = (image: any) => {
-  if (!image) {
-    console.log("No image data provided")
-    return null
-  }
-
-  // Clean up the filename - remove any path-like characters and trim
-  const cleanFilename = image.filename.trim().replace(/^[./\\]+/, "")
-
-  // Handle different path patterns
-  if (image.file_path.includes("MerchantShoppingCartImages/MGenImages_1/")) {
-    const url = `/images/artisans/${encodeURIComponent(cleanFilename)}`
-    console.log("Artisan image URL:", url)
-    return url
-  }
-
-  const url = `/images/products/${encodeURIComponent(cleanFilename)}`
-  console.log("Product image URL:", url)
-  return url
-}
+import { getImageUrl } from "@lib/util/get-image-url"
 
 export default function NeonProductPreview({
   product_id,
