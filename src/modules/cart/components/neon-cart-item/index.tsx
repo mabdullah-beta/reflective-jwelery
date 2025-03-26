@@ -10,6 +10,8 @@ import Spinner from "@modules/common/icons/spinner"
 import { useState } from "react"
 import { formatPrice } from "@lib/util/format-price"
 import { formatProductUrl } from "@lib/util/format-product-url"
+import Image from "next/image"
+import { getImageUrl } from "@lib/util/get-image-url"
 
 type NeonCartItemProps = {
   item: {
@@ -19,12 +21,22 @@ type NeonCartItemProps = {
     price: number
     stock_quantity: number
     thumbnail?: string
+    images?: Array<{
+      filename: string
+      file_path: string
+      media_caption?: string
+    }>
   }
 }
 
 const NeonCartItem = ({ item }: NeonCartItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const getCartImageUrl = () => {
+    if (!item.images?.length) return item.thumbnail
+    return getImageUrl(item.images[0])
+  }
 
   const changeQuantity = async (quantity: number) => {
     setError(null)
@@ -65,16 +77,22 @@ const NeonCartItem = ({ item }: NeonCartItemProps) => {
           href={`/store/products/${formatProductUrl(item.product_name)}`}
           className="flex w-[80px]"
         >
-          <div className="w-[80px] h-[80px] bg-gray-100 rounded-md flex items-center justify-center">
-            {item.thumbnail ? (
-              <img
-                src={item.thumbnail}
-                alt={item.product_name}
-                className="w-full h-full object-cover rounded-md"
-              />
-            ) : (
-              <span className="text-gray-400 text-sm">No image</span>
-            )}
+          <div className="w-[80px] h-[80px] bg-gray-100 rounded-md flex items-center justify-center relative">
+            {(() => {
+              const imageUrl = getCartImageUrl()
+              if (!imageUrl) {
+                return <span className="text-gray-400 text-sm">No image</span>
+              }
+              return (
+                <Image
+                  src={imageUrl}
+                  alt={item.product_name}
+                  fill
+                  className="object-cover rounded-md"
+                  sizes="80px"
+                />
+              )
+            })()}
           </div>
         </LocalizedClientLink>
       </Table.Cell>

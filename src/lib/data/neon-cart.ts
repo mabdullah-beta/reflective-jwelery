@@ -12,6 +12,11 @@ interface NeonCartItem {
   price: number
   stock_quantity: number
   thumbnail?: string
+  images?: Array<{
+    filename: string
+    file_path: string
+    media_caption?: string
+  }>
 }
 
 interface NeonCart {
@@ -42,6 +47,7 @@ export async function addToNeonCart({
   price,
   stockQuantity,
   thumbnail,
+  images,
 }: {
   productId: string
   quantity: number
@@ -49,6 +55,11 @@ export async function addToNeonCart({
   price: number
   stockQuantity: number
   thumbnail?: string
+  images?: Array<{
+    filename: string
+    file_path: string
+    media_caption?: string
+  }>
 }) {
   const cart = await getNeonCart()
 
@@ -80,6 +91,7 @@ export async function addToNeonCart({
       price,
       stock_quantity: stockQuantity,
       thumbnail,
+      images,
     })
   }
 

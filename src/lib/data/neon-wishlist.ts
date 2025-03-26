@@ -11,6 +11,11 @@ interface WishlistItem {
   price: number
   thumbnail?: string
   added_at: string
+  images?: Array<{
+    filename: string
+    file_path: string
+    media_caption?: string
+  }>
 }
 
 interface Wishlist {
@@ -38,11 +43,17 @@ export async function addToWishlist({
   productName,
   price,
   thumbnail,
+  images,
 }: {
   productId: string
   productName: string
   price: number
   thumbnail?: string
+  images?: Array<{
+    filename: string
+    file_path: string
+    media_caption?: string
+  }>
 }) {
   const wishlist = await getWishlist()
 
@@ -58,6 +69,7 @@ export async function addToWishlist({
       product_name: productName,
       price,
       thumbnail,
+      images,
       added_at: new Date().toISOString(),
     })
 

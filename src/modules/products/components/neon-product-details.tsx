@@ -40,6 +40,13 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     setIsLoading(true)
 
     try {
+      // Transform product images to match cart image type
+      const cartImages = product.images?.map((img) => ({
+        filename: img.filename,
+        file_path: img.file_path,
+        media_caption: img.media_caption || undefined,
+      }))
+
       // Get the first image URL for the thumbnail
       const thumbnail = product.images?.[0]?.file_path
         ? `/images/products/${encodeURIComponent(
@@ -54,6 +61,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         price: Number(product.price),
         stockQuantity: product.stock_quantity || 0,
         thumbnail,
+        images: cartImages,
       })
       window.location.href = "/store/cart"
     } catch (error) {
@@ -73,6 +81,13 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         setShowWishlistMessage(true)
         setTimeout(() => setShowWishlistMessage(false), 3000)
       } else {
+        // Transform product images to match wishlist image type
+        const wishlistImages = product.images?.map((img) => ({
+          filename: img.filename,
+          file_path: img.file_path,
+          media_caption: img.media_caption || undefined,
+        }))
+
         // Get the first image URL for the thumbnail
         const thumbnail = product.images?.[0]?.file_path
           ? `/images/products/${encodeURIComponent(
@@ -85,6 +100,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           productName: product.product_name,
           price: Number(product.price),
           thumbnail,
+          images: wishlistImages,
         })
         setIsInWishlistState(true)
         setShowWishlistMessage(true)

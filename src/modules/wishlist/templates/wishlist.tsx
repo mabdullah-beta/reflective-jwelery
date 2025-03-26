@@ -7,6 +7,8 @@ import { addToNeonCart } from "@lib/data/neon-cart"
 import { removeFromWishlist } from "@lib/data/neon-wishlist"
 import { useState } from "react"
 import Spinner from "@modules/common/icons/spinner"
+import Image from "next/image"
+import { getImageUrl } from "@lib/util/get-image-url"
 
 type WishlistTemplateProps = {
   wishlist: {
@@ -35,17 +37,13 @@ export default function WishlistTemplate({ wishlist }: WishlistTemplateProps) {
     message: string
   } | null>(null)
 
-  const getImageUrl = (item: WishlistTemplateProps["wishlist"]["items"][0]) => {
+  const getWishlistImageUrl = (
+    item: WishlistTemplateProps["wishlist"]["items"][0]
+  ) => {
     if (!item.images?.length) return item.thumbnail
 
     const image = item.images[0]
-    const cleanFilename = image.filename.trim().replace(/^[./\\]+/, "")
-
-    if (image.file_path.includes("MerchantShoppingCartImages/MGenImages_1/")) {
-      return `/images/artisans/${encodeURIComponent(cleanFilename)}`
-    }
-
-    return `/images/products/${encodeURIComponent(cleanFilename)}`
+    return getImageUrl(image)
   }
 
   const handleRemove = async (productId: string) => {
@@ -76,7 +74,7 @@ export default function WishlistTemplate({ wishlist }: WishlistTemplateProps) {
     setLoadingStates((prev) => ({ ...prev, [item.product_id]: true }))
     setError(null)
     try {
-      const imageUrl = getImageUrl(item)
+      const imageUrl = getWishlistImageUrl(item)
       await addToNeonCart({
         productId: item.product_id,
         quantity: 1,
@@ -203,16 +201,26 @@ export default function WishlistTemplate({ wishlist }: WishlistTemplateProps) {
                     href={`/store/products/${item.product_id}`}
                     className="flex-shrink-0"
                   >
-                    <div className="w-24 h-24 bg-gray-100 rounded-md flex items-center justify-center">
-                      {getImageUrl(item) ? (
-                        <img
-                          src={getImageUrl(item)}
-                          alt={item.product_name}
-                          className="w-full h-full object-cover rounded-md"
-                        />
-                      ) : (
-                        <span className="text-gray-400 text-sm">No image</span>
-                      )}
+                    <div className="w-24 h-24 bg-gray-100 rounded-md flex items-center justify-center relative">
+                      {(() => {
+                        const imageUrl = getWishlistImageUrl(item)
+                        if (!imageUrl) {
+                          return (
+                            <span className="text-gray-400 text-sm">
+                              No image
+                            </span>
+                          )
+                        }
+                        return (
+                          <Image
+                            src={imageUrl}
+                            alt={item.product_name}
+                            fill
+                            className="object-cover rounded-md"
+                            sizes="96px"
+                          />
+                        )
+                      })()}
                     </div>
                   </LocalizedClientLink>
 
