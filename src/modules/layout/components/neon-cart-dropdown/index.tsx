@@ -27,7 +27,7 @@ const NeonCartDropdown = () => {
     undefined
   )
   const [updating, setUpdating] = useState(false)
-  const pollingInterval = useRef<NodeJS.Timer>()
+  const pollingInterval = useRef<NodeJS.Timer | undefined>(undefined)
 
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
