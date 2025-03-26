@@ -1,6 +1,7 @@
 import { Container, clx } from "@medusajs/ui"
 import Image from "next/image"
 import React from "react"
+import { getImageUrl } from "@lib/util/get-image-url"
 
 import PlaceholderImage from "@modules/common/icons/placeholder-image"
 
@@ -22,7 +23,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
   className,
   "data-testid": dataTestid,
 }) => {
-  const initialImage = thumbnail || images?.[0]?.url
+  const initialImage = thumbnail || (images?.[0] && getImageUrl(images[0]))
 
   return (
     <Container

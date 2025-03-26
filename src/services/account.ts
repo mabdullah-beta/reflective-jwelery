@@ -35,11 +35,13 @@ export async function signUp(
     body: JSON.stringify(credentials),
   })
 
+  const data = await response.json()
+
   if (!response.ok) {
-    throw new Error("Failed to sign up")
+    throw new Error(data.error)
   }
 
-  return response.json()
+  return data
 }
 
 export async function getCurrentCustomer(): Promise<Customer | null> {

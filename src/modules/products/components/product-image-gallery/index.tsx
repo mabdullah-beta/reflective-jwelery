@@ -4,11 +4,12 @@ import { useState } from "react"
 import Image from "next/image"
 import { Text } from "@medusajs/ui"
 import { motion, AnimatePresence } from "framer-motion"
+import { getImageUrl } from "@lib/util/get-image-url"
 
 type GalleryImage = {
   media_id: number
-  url: string
-  alt: string
+  filename: string
+  file_path: string
   media_caption?: string
 }
 
@@ -66,8 +67,8 @@ export default function ProductImageGallery({
             className="relative w-full h-full"
           >
             <Image
-              src={images[selectedIndex].url}
-              alt={images[selectedIndex].alt || productName}
+              src={getImageUrl(images[selectedIndex]) || ""}
+              alt={images[selectedIndex].media_caption || productName}
               fill
               className={`object-contain transition-transform duration-300 ${
                 isZoomed ? "scale-150" : "scale-100"
@@ -113,7 +114,7 @@ export default function ProductImageGallery({
               }`}
             >
               <Image
-                src={image.url}
+                src={getImageUrl(image) || ""}
                 alt={`${productName} thumbnail ${index + 1}`}
                 fill
                 className="object-cover"

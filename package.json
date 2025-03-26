@@ -12,7 +12,8 @@
     "build": "next build",
     "start": "next start -p 8000",
     "lint": "next lint",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "ANALYZE=true next build",
+    "migrate-images": "ts-node scripts/migrate-images.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
@@ -25,6 +26,7 @@
     "@vercel/blob": "^0.27.3",
     "@vercel/postgres": "^0.10.0",
     "bcryptjs": "^3.0.2",
+    "dotenv": "^16.4.7",
     "framer-motion": "^12.5.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.482.0",
@@ -37,6 +39,7 @@
     "react-dom": "19.0.0-rc-66855b96-20241106",
     "server-only": "^0.0.1",
     "tailwindcss-radix": "^2.8.0",
+    "ts-node": "^10.9.2",
     "webpack": "^5"
   },
   "devDependencies": {
