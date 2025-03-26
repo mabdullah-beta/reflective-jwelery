@@ -13,6 +13,12 @@ import { Fragment, useEffect, useRef, useState } from "react"
 import { getNeonCart, removeFromNeonCart } from "@lib/data/neon-cart"
 import { formatPrice } from "@lib/util/format-price"
 import Spinner from "@modules/common/icons/spinner"
+import { formatProductUrl } from "@lib/util/format-product-url"
+import Image from "next/image"
+import { getImageUrl } from "@lib/util/get-image-url"
+
+// Custom event for cart updates
+const CART_UPDATE_EVENT = "neon-cart-update"
 
 const NeonCartDropdown = () => {
   const [cart, setCart] = useState<any>(null)
@@ -21,6 +27,7 @@ const NeonCartDropdown = () => {
     undefined
   )
   const [updating, setUpdating] = useState(false)
+  const pollingInterval = useRef<NodeJS.Timer>()
 
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
@@ -30,8 +37,33 @@ const NeonCartDropdown = () => {
     setCart(cartData)
   }
 
+  // Set up polling and event listeners
   useEffect(() => {
+    // Initial load
     loadCart()
+
+    // Set up polling every 2 seconds
+    pollingInterval.current = setInterval(loadCart, 2000)
+
+    // Set up custom event listener
+    const handleCartUpdate = (event: CustomEvent) => {
+      loadCart()
+    }
+    window.addEventListener(
+      CART_UPDATE_EVENT,
+      handleCartUpdate as EventListener
+    )
+
+    // Cleanup
+    return () => {
+      if (pollingInterval.current) {
+        clearInterval(pollingInterval.current)
+      }
+      window.removeEventListener(
+        CART_UPDATE_EVENT,
+        handleCartUpdate as EventListener
+      )
+    }
   }, [])
 
   const totalItems =
@@ -76,7 +108,9 @@ const NeonCartDropdown = () => {
     setUpdating(true)
     try {
       await removeFromNeonCart(productId)
-      await loadCart() // Reload cart after removal
+      await loadCart()
+      // Dispatch custom event
+      window.dispatchEvent(new CustomEvent(CART_UPDATE_EVENT))
     } catch (error) {
       console.error("Error removing item:", error)
     } finally {
@@ -131,27 +165,41 @@ const NeonCartDropdown = () => {
                       key={item.product_id}
                     >
                       <LocalizedClientLink
-                        href={`/store/products/${item.product_id}`}
+                        href={`/store/products/${formatProductUrl(
+                          item.product_name
+                        )}`}
                         className="w-20"
                       >
-                        <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center">
-                          {item.thumbnail ? (
-                            <img
-                              src={item.thumbnail}
-                              alt={item.product_name}
-                              className="w-full h-full object-cover rounded-md"
-                            />
-                          ) : (
-                            <span className="text-gray-400 text-sm">
-                              No image
-                            </span>
-                          )}
+                        <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center relative">
+                          {(() => {
+                            const imageUrl = item.images?.[0]
+                              ? getImageUrl(item.images[0])
+                              : item.thumbnail
+                            if (!imageUrl) {
+                              return (
+                                <span className="text-gray-400 text-sm">
+                                  No image
+                                </span>
+                              )
+                            }
+                            return (
+                              <Image
+                                src={imageUrl}
+                                alt={item.product_name}
+                                fill
+                                className="object-cover rounded-md"
+                                sizes="80px"
+                              />
+                            )
+                          })()}
                         </div>
                       </LocalizedClientLink>
                       <div className="flex flex-col justify-between flex-1">
                         <div>
                           <LocalizedClientLink
-                            href={`/store/products/${item.product_id}`}
+                            href={`/store/products/${formatProductUrl(
+                              item.product_name
+                            )}`}
                             className="text-gray-900 font-medium hover:text-gray-700"
                           >
                             {item.product_name}

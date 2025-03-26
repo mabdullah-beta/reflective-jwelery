@@ -13,6 +13,9 @@ import { formatProductUrl } from "@lib/util/format-product-url"
 import Image from "next/image"
 import { getImageUrl } from "@lib/util/get-image-url"
 
+// Custom event for cart updates
+const CART_UPDATE_EVENT = "neon-cart-update"
+
 type NeonCartItemProps = {
   item: {
     product_id: string
@@ -47,6 +50,8 @@ const NeonCartItem = ({ item }: NeonCartItemProps) => {
         productId: item.product_id,
         quantity,
       })
+      // Dispatch custom event
+      window.dispatchEvent(new Event(CART_UPDATE_EVENT))
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -60,6 +65,8 @@ const NeonCartItem = ({ item }: NeonCartItemProps) => {
 
     try {
       await removeFromNeonCart(item.product_id)
+      // Dispatch custom event
+      window.dispatchEvent(new Event(CART_UPDATE_EVENT))
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
