@@ -88,8 +88,8 @@ export default async function ProductPage({ params }: Props) {
           if (!url) return null
           return {
             media_id: image.media_id,
-            url,
-            alt: image.media_caption || product.product_name,
+            filename: image.filename,
+            file_path: image.file_path,
             media_caption: image.media_caption || undefined,
           }
         })

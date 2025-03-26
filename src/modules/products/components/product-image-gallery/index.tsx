@@ -67,8 +67,12 @@ export default function ProductImageGallery({
             className="relative w-full h-full"
           >
             <Image
-              src={getImageUrl(images[selectedIndex]) || ""}
-              alt={images[selectedIndex].media_caption || productName}
+              src={
+                images[selectedIndex]
+                  ? getImageUrl(images[selectedIndex]) || null
+                  : null
+              }
+              alt={images[selectedIndex]?.media_caption || productName}
               fill
               className={`object-contain transition-transform duration-300 ${
                 isZoomed ? "scale-150" : "scale-100"
